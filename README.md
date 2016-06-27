@@ -3,7 +3,7 @@ An neat graph library for Elm.
 
 Got confused about what to wear when putting on shoes? This will help you out:
 
-```Elm
+```elm
 dressUp : Graph String () -- node labels are strings, edge labels are empty
 dressUp =
   let
