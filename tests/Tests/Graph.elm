@@ -1,13 +1,13 @@
-module Test.Graph exposing (tests)
+module Tests.Graph exposing (all)
 
 import String
 import Debug
 import Set exposing (Set)
 import IntDict exposing (IntDict)
 import Graph exposing (Graph, NodeId, Node, Edge, NodeContext)
-import Focus exposing (Focus)
 
-import ElmTest exposing (..)
+import Test exposing (..)
+import Expect
 
 
 isJust : Maybe a -> Bool
@@ -17,9 +17,9 @@ isJust m =
     _ -> False
 
 
-assertComparing : (a -> b) -> a  -> a -> Assertion
-assertComparing f a b =
-  assertEqual (f a) (f b)
+expectEqualComparing : (a -> b) -> a  -> a -> Expect.Expectation
+expectEqualComparing f a b =
+  Expect.equal (f a) (f b)
 
 
 edgeTriples : Graph n e -> List (NodeId, NodeId, e)
@@ -80,58 +80,58 @@ noNeighbors node =
   NodeContext node IntDict.empty IntDict.empty
 
 
-tests : Test
-tests =
+all : Test
+all =
   let
     emptyTests =
-      suite "empty"
-        [ test "has size 0" <| assertEqual 0 (Graph.size Graph.empty)
-        , test "isEmpty" <| assertEqual True (Graph.isEmpty Graph.empty)
+      describe "empty"
+        [ test "has size 0" <| \() -> Expect.equal 0 (Graph.size Graph.empty)
+        , test "isEmpty" <| \() -> Expect.equal True (Graph.isEmpty Graph.empty)
         ]
 
     memberTests =
-      suite "member"
-        [ test "True" <| assertEqual True (Graph.member 0 dressUp)
-        , test "True" <| assertEqual False (Graph.member 99 dressUp)
+      describe "member"
+        [ test "True" <| \() -> Expect.equal True (Graph.member 0 dressUp)
+        , test "True" <| \() -> Expect.equal False (Graph.member 99 dressUp)
         ]
 
     getTests =
-      suite "get"
-        [ test "id 0, the socks" <|
-            assertEqual
+      describe "get"
+        [ test "id 0, the socks" <| \() ->
+            Expect.equal
               (Just "Socks")
               (dressUp |> Graph.get 0 |> Maybe.map (.node >> .label))
-        , test "id 99, Nothing" <| assertEqual Nothing (Graph.get 99 dressUp)
+        , test "id 99, Nothing" <| \() -> Expect.equal Nothing (Graph.get 99 dressUp)
         ]
 
     nodeIdRangeTests =
-      suite "nodeIdRange"
-        [ test "dressUp: [0, 8]" <|
-            assertEqual
+      describe "nodeIdRange"
+        [ test "dressUp: [0, 8]" <| \() ->
+            Expect.equal
               (Just (0, 8))
               (Graph.nodeIdRange dressUp)
-        , test "dressUp - 0: [1, 8]" <|
-            assertEqual
+        , test "dressUp - 0: [1, 8]" <| \() ->
+            Expect.equal
               (Just (1, 8))
               (dressUp |> Graph.remove 0 |> Graph.nodeIdRange)
-        , test "dressUp - 8: [0, 7]" <|
-            assertEqual
+        , test "dressUp - 8: [0, 7]" <| \() ->
+            Expect.equal
               (Just (0, 7))
               (dressUp |> Graph.remove 8 |> Graph.nodeIdRange)
         ]
 
     listRepTests =
-      suite "list conversions"
-        [ test "nodeIds" <|
-            assertEqual
+      describe "list conversions"
+        [ test "nodeIds" <| \() ->
+            Expect.equal
               [0, 1, 2, 3, 4, 5, 6, 7, 8]
               (dressUp |> Graph.nodeIds)
-        , test "nodes" <|
-            assertEqual
+        , test "nodes" <| \() ->
+            Expect.equal
               [0, 1, 2, 3, 4, 5, 6, 7, 8]
               (dressUp |> Graph.nodes |> List.map .id)
-        , test "edges" <|
-            assertEqual
+        , test "edges" <| \() ->
+            Expect.equal
               [(0, 3), (1, 2), (1, 3), (2, 3), (2, 6), (5, 6), (5, 7), (6, 8), (7, 8)]
               (dressUp
                  |> Graph.edges
@@ -139,49 +139,32 @@ tests =
                  |> List.sort)
         ]
 
-    focusTests =
-      suite "foci"
-        [ test "get anyNode - empty" <|
-            assertEqual
-              Nothing
-              (Focus.get Graph.anyNode Graph.empty)
-        , test "get anyNode - not empty" <|
-            assert
-              (dressUp |> Focus.get Graph.anyNode |> isJust)
-        , test "set anyNode - empty" <|
-            assertEqual
-              Nothing
-              (Graph.empty
-                 |> Focus.set Graph.anyNode (Just (noNeighbors (Node 9 "lkj")))
-                 |> Graph.get 9)
-        ]
-
     insertTests =
-      suite "insert"
-        [ test "new node - size" <|
-            assertEqual
+      describe "insert"
+        [ test "new node - size" <| \() ->
+            Expect.equal
               (dressUp |> Graph.size |> (+) 1)
               (dressUp |> Graph.insert (noNeighbors (Node 99 "Ring")) |> Graph.size)
-        , test "new node - can get it" <|
-            assertEqual
+        , test "new node - can get it" <| \() ->
+            Expect.equal
               (Just "Ring")
               (dressUp
                  |> Graph.insert (noNeighbors (Node 99 "Ring"))
                  |> Graph.get 99
                  |> Maybe.map (.node >> .label))
-        , test "replace node - size" <|
-            assertEqual
+        , test "replace node - size" <| \() ->
+            Expect.equal
               (dressUp |> Graph.size)
               (dressUp |> Graph.insert (noNeighbors (Node 0 "Ring")) |> Graph.size)
-        , test "replace node - can get it" <|
-            assertEqual
+        , test "replace node - can get it" <| \() ->
+            Expect.equal
               (Just "Ring")
               (dressUp
                  |> Graph.insert (noNeighbors (Node 0 "Ring"))
                  |> Graph.get 0
                  |> Maybe.map (.node >> .label))
-        , test "replace node - replaces adjacency" <|
-            assertEqual
+        , test "replace node - replaces adjacency" <| \() ->
+            Expect.equal
               (Just True)
               (dressUp
                  |> Graph.insert (noNeighbors (Node 0 "Ring"))
@@ -190,37 +173,37 @@ tests =
         ]
 
     removeTests =
-      suite "remove"
-        [ test "nonexistent node" <|
-            assertEqual
+      describe "remove"
+        [ test "nonexistent node" <| \() ->
+            Expect.equal
               dressUp
               (dressUp |> Graph.remove 99)
-        , test "existing node - size" <|
-            assertEqual
+        , test "existing node - size" <| \() ->
+            Expect.equal
               (dressUp |> Graph.size |> flip (-) 1)
               (dressUp |> Graph.remove 0 |> Graph.size)
-        , test "existing node - can't get it" <|
-            assertEqual
+        , test "existing node - can't get it" <| \() ->
+            Expect.equal
               Nothing
               (dressUp |> Graph.remove 0 |> Graph.get 0)
         ]
 
     updateTests =
-      suite "update"
-        [ test "remove outgoing edges" <|
-            assertEqual
+      describe "update"
+        [ test "remove outgoing edges" <| \() ->
+            Expect.equal
               (Just True)
               (dressUp
                  |> Graph.update 0 -- "Shorts" has outgoing edges
-                      (Maybe.map (Focus.set Graph.outgoing IntDict.empty))
+                      (Maybe.map (\n -> { n | outgoing = IntDict.empty }))
                  |> Graph.get 0
                  |> Maybe.map (.outgoing >> IntDict.isEmpty))
         ]
 
     inducedSubgraphTests =
-      suite "inducedSubgraph"
-        [ test "should not have any dangling edges" <|
-            assertComparing
+      describe "inducedSubgraph"
+        [ test "should not have any dangling edges" <| \() ->
+            expectEqualComparing
               (edgeTriples >> List.sortBy (\(f, t, _) -> (f, t)))
               (Graph.fromNodesAndEdges
                 [Node 0 'a', Node 1 'b', Node 4 'e']
@@ -229,46 +212,47 @@ tests =
         ]
 
     foldTests =
-      suite "fold"
-        [ test "sum up ids" <|
-            assertEqual
+      describe "fold"
+        [ test "sum up ids" <| \() ->
+            Expect.equal
               36
               (dressUp
                  |> Graph.fold (\ctx -> (+) ctx.node.id) 0)
         ]
 
     mapTests =
-      suite "map*"
-        [ test "mapContexts over id is the id" <|
-            assertEqual
+      describe "map*"
+        [ test "mapContexts over id is the id" <| \() ->
+            Expect.equal
               dressUp
               (dressUp |> Graph.mapContexts identity)
-        , test "mapNodes over id is the id" <|
-            assertEqual
+        , test "mapNodes over id is the id" <| \() ->
+            Expect.equal
               dressUp
               (dressUp |> Graph.mapNodes identity)
-        , test "mapEdges over id is the id" <|
-            assertEqual
+        , test "mapEdges over id is the id" <| \() ->
+            Expect.equal
               dressUp
               (dressUp |> Graph.mapNodes identity)
         -- This should be backed by more tests, but I'm not in the mood for that :/
         ]
 
     characterizationTests =
-      suite "characterization"
+      describe "characterization"
         [
         ]
 
     graphOpsTests =
-      suite "Graph ops"
-        [ test "symmetricClosure is symmetric" <|
-            assert
+      describe "Graph ops"
+        [ test "symmetricClosure is symmetric" <| \() ->
+            Expect.true
+              "expected all incoming edges to also be outgoing and vice versa"
               (dressUp
                  |> Graph.symmetricClosure (\_ _ e _ -> e)
                  |> Graph.fold (\ctx acc ->
                       ctx.incoming == ctx.outgoing && acc) True)
-        , test "reverseEdges" <|
-            assertEqual
+        , test "reverseEdges" <| \() ->
+            Expect.equal
               (dressUp
                  |> Graph.edges
                  |> List.map (\e -> (e.from, e.to))
@@ -284,23 +268,25 @@ tests =
       ordering
         |> List.foldl
             (\ctx maybeIds ->
-              maybeIds `Maybe.andThen` \ids ->
+              maybeIds |> Maybe.andThen (\ids ->
               if List.all (flip IntDict.member ids) (IntDict.keys ctx.incoming)
               then ids |> IntDict.insert ctx.node.id () |> Just
-              else Nothing)
+              else Nothing))
             (Just IntDict.empty)
         |> isJust
         |> (&&) (List.length ordering == Graph.size graph)
 
     topologicalSortTests =
-      suite "topologicalSort"
-        [ test "topologicalSort" <|
-            assert
+      describe "topologicalSort"
+        [ test "topologicalSort" <| \() ->
+            Expect.true
+              "expected a valid topological ordering"
               (dressUp
                 |> Graph.topologicalSort
                 |> isValidTopologicalOrderingOf dressUp)
-        , test "heightLevels" <|
-            assert
+        , test "heightLevels" <| \() ->
+            Expect.true
+              "expected a valid topological ordering"
               (dressUp
                 |> Graph.heightLevels
                 |> List.concat
@@ -309,9 +295,9 @@ tests =
 
 
     bfsTests =
-      suite "BFS"
-        [ test "breadth-first node order" <|
-            assertEqual
+      describe "BFS"
+        [ test "breadth-first node order" <| \() ->
+            Expect.equal
               [0, 3, 1, 2, 6, 8, 4, 5, 7]
               (dressUp
                 |> Graph.bfs (Graph.ignorePath (::)) []
@@ -327,28 +313,27 @@ tests =
         sg nodeIds =
           connectedComponents
             |> Graph.inducedSubgraph nodeIds
-            |> Graph.toString'
+            |> Graph.toString
       in
-        suite "Strongly connected components"
-          [ test "The expected SCCs in order" <|
-              assertEqual
+        describe "Strongly connected components"
+          [ test "The expected SCCs in order" <| \() ->
+              Expect.equal
                 [ sg [0, 1, 4] -- "abe"
                 , sg [2, 3]    -- "cd"
                 , sg [5, 6]    -- "ef"
                 , sg [7]       -- "h"
                 ]
-                (List.map Graph.toString' components)
+                (List.map Graph.toString components)
           ]
 
 
     unitTests =
-      suite "unit tests"
+      describe "unit tests"
         [ emptyTests
         , memberTests
         , getTests
         , nodeIdRangeTests
         , listRepTests
-        , focusTests
         , insertTests
         , removeTests
         , updateTests
@@ -363,21 +348,21 @@ tests =
         ]
 
     examples =
-      suite "examples"
-        [ test "README - iWantToWearShoes" <|
-            assertEqual
+      describe "examples"
+        [ test "README - iWantToWearShoes" <| \() ->
+            Expect.equal
               ["Pants", "Undershorts", "Socks", "Shoes"]
               iWantToWearShoes
-        , test "insert" <|
-            assert insertExample
-        , test "fold" <|
-            assert foldExample
-        , test "mapContexts" <|
-            assert mapContextsExample
+        , test "insert" <| \() ->
+            Expect.true "Graph size wasn't 2" insertExample
+        , test "fold" <| \() ->
+            Expect.true "The graph had a loop." foldExample
+        , test "mapContexts" <| \() ->
+            Expect.true "Mapped edge flip should've reversed edges" mapContextsExample
         ]
 
   in
-    suite "Graph tests"
+    describe "The Graph module"
       [ unitTests
       , examples
       ]
@@ -396,7 +381,7 @@ iWantToWearShoes =
     [3 {- "Shoes" NodeId -}]            -- start with the node labelled "Shoes"
     []                                  -- accumulate starting with the empty list
     dressUp                             -- traverse our dressUp graph from above
-    |> fst                              -- ignores the untraversed rest of the graph
+    |> Tuple.first                      -- ignores the untraversed rest of the graph
 
 
 insertExample : Bool

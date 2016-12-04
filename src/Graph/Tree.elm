@@ -32,7 +32,7 @@ It is instructory to read the article on [tree traversals on Wikipedia](https://
 -}
 
 
-import Queue exposing (Queue)
+import Fifo exposing (Fifo)
 
 
 {-| Data type representing an n-ary tree with node labels of type `a`
@@ -82,13 +82,13 @@ the root of the tree. Empty subtrees are filtered out. An example:
 inner : label -> List (Tree label) -> Tree label
 inner label children =
   let
-    children' =
+    nonEmptyChildren =
       List.filter (not << isEmpty) children
 
-    size' =
-      List.foldl (size >> (+)) 1 children'
+    totalSize =
+      List.foldl ((+) << size) 1 nonEmptyChildren
   in
-    MkTree size' (Just (label, children'))
+    MkTree totalSize (Just (label, nonEmptyChildren))
 
 
 {-| Construct a new tree with `unfoldTree next seed`, top to bottom. `next` will be
@@ -191,9 +191,9 @@ listForTraversal traversal tree =
 
 
 -- This is also not exported.
-pushMany : List a -> Queue a -> Queue a
+pushMany : List a -> Fifo a -> Fifo a
 pushMany vals queue =
-  List.foldl Queue.push queue vals
+  List.foldl Fifo.insert queue vals
 
 
 {-| `levelOrder visit acc tree` is a breadth-first fold over `tree`,
@@ -210,15 +210,15 @@ levelOrder : (label -> Forest label -> acc -> acc) -> acc -> Tree label -> acc
 levelOrder visit acc tree =
   let
     go acc toVisit =
-      case Queue.pop toVisit of
-        Nothing -> acc
-        Just (tree', toVisit') ->
-          case root tree' of
-            Nothing -> go acc toVisit'
+      case Fifo.remove toVisit of
+        (Nothing, _) -> acc
+        (Just tree, othersToVisit) ->
+          case root tree of
+            Nothing -> go acc othersToVisit
             Just (label, children) ->
-              go (visit label children acc) (pushMany children toVisit')
+              go (visit label children acc) (pushMany children othersToVisit)
   in
-    go acc (Queue.empty |> Queue.push tree)
+    go acc (Fifo.empty |> Fifo.insert tree)
 
 
 {-| See the documentation on `levelOrder`. `levelOrderList tree` produces
