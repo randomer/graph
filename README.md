@@ -46,7 +46,7 @@ iWantToWearShoes =
     [3 {- "Shoes" NodeId -}]            -- start with the node labelled "Shoes"
     []                                  -- accumulate starting with the empty list
     dressUp                             -- traverse our dressUp graph from above
-    |> fst                              -- ignores the untraversed rest of the graph
+    |> Tuple.first                      -- ignores the untraversed rest of the graph
 
 
 iWantToWearShoes == ["Pants", "Undershorts", "Socks", "Shoes"]
