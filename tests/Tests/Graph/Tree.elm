@@ -1,7 +1,5 @@
 module Tests.Graph.Tree exposing (all)
 
-import String
-import Debug
 import Graph.Tree as Tree exposing (Tree, Forest)
 
 import Test exposing (..)

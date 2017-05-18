@@ -1,8 +1,5 @@
 module Tests.Graph exposing (all)
 
-import String
-import Debug
-import Set exposing (Set)
 import IntDict exposing (IntDict)
 import Graph exposing (Graph, NodeId, Node, Edge, NodeContext)
 
