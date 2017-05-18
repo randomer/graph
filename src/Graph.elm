@@ -1026,25 +1026,32 @@ heightLevels graph =
     go sources [] (countIndegrees graph) graph
 
 
-{-| Computes a
+{-| Checks if the given graph is acyclic. If so, it computes a
 [topological ordering](https://en.wikipedia.org/wiki/Topological_sorting) of the
-given graph.
+graph (the `Ok` case), otherwise it will return the result of 
+`stronglyConnectedComponents` (`Err` case).
 -}
-topologicalSort : Graph n e -> Result String (List (NodeContext n e))
+topologicalSort : Graph n e -> Result (List (Graph n e)) (List (NodeContext n e))
 topologicalSort graph =
   let
-    scc = stronglyConnectedComponents graph
+    scc = 
+      stronglyConnectedComponents graph
+
     unwrapSingleNodeGraph g =
-      case List.head (nodeIds g) of
+      case nodeIdRange g of
         Nothing ->
-          Nothing
-        Just nodeId ->
-          get nodeId g
+          Debug.crash "Invariant hurt in Graph.topologicalSort: No strongly connected component should be empty"
+        Just (nodeId, _) ->
+          case get nodeId g of
+            Nothing ->
+              Debug.crash "Invariant hurt in Graph.topologicalSort: nodeId in nodeIdRange of the strongly connected component should be present in the original graph"
+            Just ctx ->
+              ctx
   in
     if List.length scc == size graph then
-      Result.Ok (List.filterMap unwrapSingleNodeGraph scc)
+      Result.Ok (List.map unwrapSingleNodeGraph scc)
     else
-      Result.Err "Cannot compute topological ordering because the graph contains at least one cycle"
+      Result.Err scc
 
 
 {-| Decomposes a graph into its strongly connected components. The resulting

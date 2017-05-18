@@ -19,7 +19,6 @@ isErr result =
     Err _ -> True
     Ok _ -> False
 
-
 expectEqualComparing : (a -> b) -> a  -> a -> Expect.Expectation
 expectEqualComparing f a b =
   Expect.equal (f a) (f b)
@@ -308,7 +307,7 @@ all =
               (case Graph.topologicalSort dressUp of
                 Ok ordering -> isValidTopologicalOrderingOf dressUp ordering
                 Err err -> False)
-        , test "returns error for graph with cycles" <| \() ->
+        , test "error for graph with cycles" <| \() ->
             Expect.true
               "expected Result.Err"
               (isErr (Graph.topologicalSort dressUpWithCycle))
