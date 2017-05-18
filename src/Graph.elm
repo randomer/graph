@@ -1030,12 +1030,21 @@ heightLevels graph =
 [topological ordering](https://en.wikipedia.org/wiki/Topological_sorting) of the
 given graph.
 -}
-topologicalSort : Graph n e -> List (NodeContext n e)
+topologicalSort : Graph n e -> Result String (List (NodeContext n e))
 topologicalSort graph =
-  graph
-    |> dfsForest (nodeIds graph)
-    |> List.reverse
-    |> List.concatMap Tree.preOrderList
+  let
+    scc = stronglyConnectedComponents graph
+    unwrapSingleNodeGraph g =
+      case List.head (nodeIds g) of
+        Nothing ->
+          Nothing
+        Just nodeId ->
+          get nodeId g
+  in
+    if List.length scc == size graph then
+      Result.Ok (List.filterMap unwrapSingleNodeGraph scc)
+    else
+      Result.Err "Cannot compute topological ordering because the graph contains at least one cycle"
 
 
 {-| Decomposes a graph into its strongly connected components. The resulting

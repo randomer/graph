@@ -281,9 +281,9 @@ all =
         [ test "topologicalSort" <| \() ->
             Expect.true
               "expected a valid topological ordering"
-              (dressUp
-                |> Graph.topologicalSort
-                |> isValidTopologicalOrderingOf dressUp)
+              (case Graph.topologicalSort dressUp of
+                Ok ordering -> isValidTopologicalOrderingOf dressUp ordering
+                Err err -> False)
         , test "heightLevels" <| \() ->
             Expect.true
               "expected a valid topological ordering"
