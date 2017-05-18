@@ -16,6 +16,12 @@ isJust m =
     Just _ -> True
     _ -> False
 
+isErr : Result m n -> Bool
+isErr result =
+  case result of
+    Err _ -> True
+    Ok _ -> False
+
 
 expectEqualComparing : (a -> b) -> a  -> a -> Expect.Expectation
 expectEqualComparing f a b =
@@ -57,6 +63,27 @@ dressUp =
       , e 7 8 -- tie before jacket
       ]
 
+  in
+    Graph.fromNodesAndEdges nodes edges
+
+
+dressUpWithCycle : Graph String ()
+dressUpWithCycle =
+  let
+    nodes =
+      [ Node 0 "Socks"
+      , Node 1 "Undershorts"
+      , Node 2 "Pants"
+      ]
+
+    e from to =
+      Edge from to ()
+
+    edges =
+      [ e 0 1
+      , e 1 2
+      , e 2 0
+      ]
   in
     Graph.fromNodesAndEdges nodes edges
 
@@ -281,9 +308,13 @@ all =
         [ test "topologicalSort" <| \() ->
             Expect.true
               "expected a valid topological ordering"
-              (dressUp
-                |> Graph.topologicalSort
-                |> isValidTopologicalOrderingOf dressUp)
+              (case Graph.topologicalSort dressUp of
+                Ok ordering -> isValidTopologicalOrderingOf dressUp ordering
+                Err err -> False)
+        , test "returns error for graph with cycles" <| \() ->
+            Expect.true
+              "expected Result.Err"
+              (isErr (Graph.topologicalSort dressUpWithCycle))
         , test "heightLevels" <| \() ->
             Expect.true
               "expected a valid topological ordering"
