@@ -501,8 +501,13 @@ fromNodesAndEdges nodes edges =
         rep
           |> IntDict.update edge.from (Maybe.map updateOutgoing)
           |> IntDict.update edge.to (Maybe.map updateIncoming)
+
+    addEdgeIfValid edge rep =
+      if IntDict.member edge.from rep && IntDict.member edge.to rep
+        then addEdge edge rep
+        else rep
   in
-    Graph (List.foldl addEdge nodeRep edges)
+    Graph (List.foldl addEdgeIfValid nodeRep edges)
 
 
 {-| A more convenient version of `fromNodesAndEdges`, when edges are unlabeled
