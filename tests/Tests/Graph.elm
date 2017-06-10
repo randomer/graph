@@ -234,6 +234,17 @@ all =
               (Graph.inducedSubgraph [0, 1, 4] connectedComponents)
         ]
 
+    fromNodesAndEdgesTests =
+      describe "fromNodesAndEdges"
+        [ test "should not have any dangling edges" <| \() ->
+            Expect.equal
+              [Edge 0 0 ()]
+              (Graph.edges 
+                (Graph.fromNodesAndEdges 
+                  [Node 0 'a'] 
+                  [Edge 0 0 (), Edge 0 1 (), Edge 1 0 (), Edge 1 1 ()]))
+        ]
+
     foldTests =
       describe "fold"
         [ test "sum up ids" <| \() ->
@@ -365,6 +376,7 @@ all =
         , removeTests
         , updateTests
         , inducedSubgraphTests
+        , fromNodesAndEdgesTests
         , foldTests
         , mapTests
         , characterizationTests
