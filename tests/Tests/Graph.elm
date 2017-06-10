@@ -115,7 +115,7 @@ all =
     memberTests =
       describe "member"
         [ test "True" <| \() -> Expect.equal True (Graph.member 0 dressUp)
-        , test "True" <| \() -> Expect.equal False (Graph.member 99 dressUp)
+        , test "False" <| \() -> Expect.equal False (Graph.member 99 dressUp)
         ]
 
     getTests =
@@ -271,11 +271,6 @@ all =
         -- This should be backed by more tests, but I'm not in the mood for that :/
         ]
 
-    characterizationTests =
-      describe "characterization"
-        [
-        ]
-
     graphOpsTests =
       describe "Graph ops"
         [ test "symmetricClosure is symmetric" <| \() ->
@@ -312,7 +307,7 @@ all =
 
     topologicalSortTests =
       describe "topologicalSort"
-        [ test "topologicalSort" <| \() ->
+        [ test "ok for graph with no cycles" <| \() ->
             Expect.true
               "expected a valid topological ordering"
               (case Graph.topologicalSort dressUp of
@@ -379,7 +374,6 @@ all =
         , fromNodesAndEdgesTests
         , foldTests
         , mapTests
-        , characterizationTests
         , graphOpsTests
         , topologicalSortTests
         , bfsTests
