@@ -8,7 +8,8 @@
     ],
     "exposed-modules": [
         "Graph",
-        "Graph.Tree"
+        "Graph.Tree",
+        "Graph.GraphViz"
     ],
     "dependencies": {
         "avh4/elm-fifo": "1.0.3 <= v < 2.0.0",
