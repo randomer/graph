@@ -1,87 +1,111 @@
 module Tests.Graph.Tree exposing (all)
 
-import Graph.Tree as Tree exposing (Tree, Forest)
-
-import Test exposing (..)
 import Expect
+import Graph.Tree as Tree exposing (Forest, Tree)
+import Test exposing (..)
 
 
 size : Tree a -> Int
 size tree =
-  tree
-   |> Tree.preOrderList
-   |> List.length
+    tree
+        |> Tree.preOrderList
+        |> List.length
 
 
 all : Test
 all =
-  let
-    innerExample1 = Tree.inner 1 [Tree.leaf 2, Tree.leaf 3, Tree.leaf 4]
-    innerExample2 = Tree.inner 1 [Tree.leaf 2, Tree.leaf 3, Tree.leaf 4, Tree.empty]
+    let
+        innerExample1 =
+            Tree.inner 1 [ Tree.leaf 2, Tree.leaf 3, Tree.leaf 4 ]
 
-    buildingTests =
-      describe "building"
-        [ test "empty has no nodes" <| \() -> Expect.equal 0 (size Tree.empty)
-        , test "leaf has one node" <| \() -> Expect.equal 1 (size (Tree.leaf 42))
-        , test "inner with 3 children has 3 nodes" <| \() ->
-            Expect.equal 4 (size innerExample1)
-        , test "inner removes empty children" <| \() ->
-            Expect.equal innerExample1 innerExample2
-        , test "unfoldTree" <| \() ->
-            Expect.equal
-              innerExample1
-              (Tree.unfoldTree (\s -> (s, if s == 1 then [2, 3, 4] else [])) 1)
-        ]
+        innerExample2 =
+            Tree.inner 1 [ Tree.leaf 2, Tree.leaf 3, Tree.leaf 4, Tree.empty ]
 
-    queryTests =
-      describe "query"
-        [ test "empty isEmpty" <| \() -> Expect.equal True (Tree.isEmpty Tree.empty)
-        , test "leaf is not empty" <| \() -> Expect.equal False (Tree.isEmpty (Tree.leaf 42))
-        , test "inner with 2 children is not empty" <| \() ->
-               Expect.equal False (Tree.isEmpty (Tree.leaf ()))
-        , test "root of a non-empty tree" <| \() ->
-            Expect.equal (Just (42, [])) (Tree.root (Tree.leaf 42))
-        , test "root of an empty tree" <| \() ->
-            Expect.equal Nothing (Tree.root Tree.empty)
-        , test "size of a non-empty tree" <| \() ->
-            Expect.equal (Tree.size traversedTree) 7
-        , test "height of a non-empty tree" <| \() ->
-            Expect.equal (Tree.height traversedTree) 3
-        , test "height of an empty tree" <| \() ->
-            Expect.equal (Tree.height Tree.empty) 0
-        ]
+        buildingTests =
+            describe "building"
+                [ test "empty has no nodes" <| \() -> Expect.equal 0 (size Tree.empty)
+                , test "leaf has one node" <| \() -> Expect.equal 1 (size (Tree.leaf 42))
+                , test "inner with 3 children has 3 nodes" <|
+                    \() ->
+                        Expect.equal 4 (size innerExample1)
+                , test "inner removes empty children" <|
+                    \() ->
+                        Expect.equal innerExample1 innerExample2
+                , test "unfoldTree" <|
+                    \() ->
+                        Expect.equal
+                            innerExample1
+                            (Tree.unfoldTree
+                                (\s ->
+                                    ( s
+                                    , if s == 1 then
+                                        [ 2, 3, 4 ]
+                                      else
+                                        []
+                                    )
+                                )
+                                1
+                            )
+                ]
 
-    traversedTree =
-      Tree.inner 0
-        [ Tree.inner 1
-            [ Tree.leaf 2, Tree.leaf 3 ]
-        , Tree.inner 4
-            [ Tree.leaf 5, Tree.leaf 6 ]
-        ]
+        queryTests =
+            describe "query"
+                [ test "empty isEmpty" <| \() -> Expect.equal True (Tree.isEmpty Tree.empty)
+                , test "leaf is not empty" <| \() -> Expect.equal False (Tree.isEmpty (Tree.leaf 42))
+                , test "inner with 2 children is not empty" <|
+                    \() ->
+                        Expect.equal False (Tree.isEmpty (Tree.leaf ()))
+                , test "root of a non-empty tree" <|
+                    \() ->
+                        Expect.equal (Just ( 42, [] )) (Tree.root (Tree.leaf 42))
+                , test "root of an empty tree" <|
+                    \() ->
+                        Expect.equal Nothing (Tree.root Tree.empty)
+                , test "size of a non-empty tree" <|
+                    \() ->
+                        Expect.equal (Tree.size traversedTree) 7
+                , test "height of a non-empty tree" <|
+                    \() ->
+                        Expect.equal (Tree.height traversedTree) 3
+                , test "height of an empty tree" <|
+                    \() ->
+                        Expect.equal (Tree.height Tree.empty) 0
+                ]
 
-    traversalTests =
-      describe "traversal"
-        [ test "levelOrderList" <| \() ->
-            Expect.equal
-              [0, 1, 4, 2, 3, 5, 6]
-              (Tree.levelOrderList traversedTree)
-        , test "postOrderList" <| \() ->
-            Expect.equal
-              [2, 3, 1, 5, 6, 4, 0]
-              (Tree.postOrderList traversedTree)
-        , test "preOrderList" <| \() ->
-            Expect.equal
-              [0, 1, 2, 3, 4, 5, 6]
-              (Tree.preOrderList traversedTree)
-        ]
+        traversedTree =
+            Tree.inner 0
+                [ Tree.inner 1
+                    [ Tree.leaf 2, Tree.leaf 3 ]
+                , Tree.inner 4
+                    [ Tree.leaf 5, Tree.leaf 6 ]
+                ]
 
-    unitTests =
-      describe "unit tests"
-        [ buildingTests
-        , queryTests
-        , traversalTests
-        ]
-  in
+        traversalTests =
+            describe "traversal"
+                [ test "levelOrderList" <|
+                    \() ->
+                        Expect.equal
+                            [ 0, 1, 4, 2, 3, 5, 6 ]
+                            (Tree.levelOrderList traversedTree)
+                , test "postOrderList" <|
+                    \() ->
+                        Expect.equal
+                            [ 2, 3, 1, 5, 6, 4, 0 ]
+                            (Tree.postOrderList traversedTree)
+                , test "preOrderList" <|
+                    \() ->
+                        Expect.equal
+                            [ 0, 1, 2, 3, 4, 5, 6 ]
+                            (Tree.preOrderList traversedTree)
+                ]
+
+        unitTests =
+            describe "unit tests"
+                [ buildingTests
+                , queryTests
+                , traversalTests
+                ]
+    in
     describe "The Graph.Tree module"
-      [ unitTests
-      ]
+        [ unitTests
+        ]

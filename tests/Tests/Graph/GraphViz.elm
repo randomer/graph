@@ -1,9 +1,9 @@
 module Tests.Graph.GraphViz exposing (all)
 
-import Graph.GraphViz as Viz exposing (..)
-import Graph exposing (Graph, NodeId, Node, Edge, NodeContext)
-import Test exposing (..)
 import Expect
+import Graph exposing (Edge, Graph, Node, NodeContext, NodeId)
+import Graph.GraphViz as Viz exposing (..)
+import Test exposing (..)
 
 
 all : Test
@@ -51,7 +51,7 @@ all =
                     actual =
                         output g
                 in
-                    \() -> Expect.equal expected actual
+                \() -> Expect.equal expected actual
             , test "with styles" <|
                 let
                     nodes =
@@ -100,7 +100,7 @@ all =
                     actual =
                         outputWithStyles myStyles g
                 in
-                    \() -> Expect.equal expected actual
+                \() -> Expect.equal expected actual
             , test "with styles with overrides" <|
                 let
                     n id text attrs =
@@ -150,6 +150,6 @@ all =
                     actual =
                         outputWithStylesWithOverrides myStyles g
                 in
-                    \() -> Expect.equal expected actual
+                \() -> Expect.equal expected actual
             ]
         ]

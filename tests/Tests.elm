@@ -1,15 +1,13 @@
 module Tests exposing (suite)
 
-
+import Test exposing (..)
 import Tests.Graph
 import Tests.Graph.Tree
-
-import Test exposing (..)
 
 
 suite : Test
 suite =
-  describe "elm-graph"
-    [ Tests.Graph.all
-    , Tests.Graph.Tree.all
-    ]
+    describe "elm-graph"
+        [ Tests.Graph.all
+        , Tests.Graph.Tree.all
+        ]
