@@ -33,6 +33,7 @@ all =
 
                     expected =
                         """digraph G {
+  rankdir=TB
   graph []
   node []
   edge []
@@ -74,6 +75,7 @@ all =
 
                     expected =
                         """digraph G {
+  rankdir=LR
   graph [bgcolor=red]
   node [shape=box, color=blue, style="rounded, filled"]
   edge []
@@ -90,7 +92,8 @@ all =
 
                     myStyles =
                         { defaultStyles
-                            | graph = "bgcolor=red"
+                            | rankdir = LR
+                            , graph = "bgcolor=red"
                             , node = "shape=box, color=blue, style=\"rounded, filled\""
                         }
 

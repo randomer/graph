@@ -4,6 +4,7 @@ module Graph.GraphViz
         , outputWithStyles
         , defaultStyles
         , Styles
+        , Rankdir(..)
         )
 
 {-| This module provides a means of converting the `Graph` data type into a valid [GraphViz](http://www.graphviz.org/) string for visualizing your graph structure.
@@ -18,7 +19,7 @@ You can also dynamically draw your graph in your application by sending the stri
 
 GraphViz allows for customizing the graph's look via "Attrs."
 
-@docs Styles, defaultStyles, outputWithStyles
+@docs Styles, Rankdir, defaultStyles, outputWithStyles
 -}
 
 import Graph exposing (Graph, Edge, Node, edges, nodes, get)
@@ -36,10 +37,20 @@ output =
 Note that `Styles` is made up of strings, which loses type safety, but allows you to use any GraphViz attrs without having to model them out in entirety in this module.  It is up to you to make sure you provide valid attr strings.  See http://www.graphviz.org/content/attrs for available options.
 -}
 type alias Styles =
-    { graph : String
+    { rankdir : Rankdir
+    , graph : String
     , node : String
     , edge : String
     }
+
+
+{-| Values to control the direction of the graph
+-}
+type Rankdir
+    = TB
+    | LR
+    | BT
+    | RL
 
 
 {-| A blank `Styles` record to build from to define your own styles.
@@ -51,7 +62,7 @@ type alias Styles =
 -}
 defaultStyles : Styles
 defaultStyles =
-    Styles "" "" ""
+    Styles TB "" "" ""
 
 
 {-| Same as `output`, but allows you to add attrs to the graph.  These attrs will be applied to the entire graph.
@@ -99,24 +110,11 @@ outputWithStyles styles graph =
 
         node node =
             "  " ++ Basics.toString node.label
-
-        graphStyles =
-            "  graph [" ++ styles.graph ++ "]"
-
-        nodeStyles =
-            "  node [" ++ styles.node ++ "]"
-
-        edgeStyles =
-            "  edge [" ++ styles.edge ++ "]"
     in
         "digraph G {\n"
-            ++ graphStyles
-            ++ "\n"
-            ++ nodeStyles
-            ++ "\n"
-            ++ edgeStyles
-            ++ "\n\n"
-            ++ edgesString
-            ++ "\n\n"
-            ++ nodesString
-            ++ "\n}"
+            ++ ("  rankdir=" ++ toString styles.rankdir ++ "\n")
+            ++ ("  graph [" ++ styles.graph ++ "]" ++ "\n")
+            ++ ("  node [" ++ styles.node ++ "]" ++ "\n")
+            ++ ("  edge [" ++ styles.edge ++ "]" ++ "\n\n")
+            ++ (edgesString ++ "\n\n")
+            ++ (nodesString ++ "\n}")
