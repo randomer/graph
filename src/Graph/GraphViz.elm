@@ -2,6 +2,7 @@ module Graph.GraphViz
     exposing
         ( output
         , outputWithStyles
+        , outputWithStylesWithOverrides
         , defaultStyles
         , Styles
         , Rankdir(..)
@@ -19,15 +20,15 @@ You can also dynamically draw your graph in your application by sending the stri
 
 GraphViz allows for customizing the graph's look via "Attrs."
 
-@docs Styles, Rankdir, defaultStyles, outputWithStyles
+@docs Styles, Rankdir, defaultStyles, outputWithStyles, outputWithStylesWithOverrides
 -}
 
 import Graph exposing (Graph, Edge, Node, edges, nodes, get)
 
 
-{-| Converts a `Graph` into a valid GraphViz string.  Note that the you must supply a `Graph String e` type, where the `String` is the label that should be printed in each node.
+{-| Converts a `Graph` into a valid GraphViz string.  Note that the you must supply a `Graph { a | text : String } e` type, where the "text" field of the node is the text that should be printed in that node.
 -}
-output : Graph String e -> String
+output : Graph { a | text : String } e -> String
 output =
     outputWithStyles defaultStyles
 
@@ -67,12 +68,12 @@ defaultStyles =
 
 {-| Same as `output`, but allows you to add attrs to the graph.  These attrs will be applied to the entire graph.
 -}
-outputWithStyles : Styles -> Graph String e -> String
+outputWithStyles : Styles -> Graph { a | text : String } e -> String
 outputWithStyles styles graph =
     let
         getText id =
             get id graph
-                |> Maybe.map (.node >> .label)
+                |> Maybe.map (.node >> .label >> .text)
                 |> Maybe.withDefault ("*Node id " ++ toString id ++ " not found*")
 
         edges =
@@ -109,7 +110,71 @@ outputWithStyles styles graph =
                 |> String.join "\n"
 
         node node =
-            "  " ++ Basics.toString node.label
+            "  " ++ Basics.toString (getText node.id)
+    in
+        "digraph G {\n"
+            ++ ("  rankdir=" ++ toString styles.rankdir ++ "\n")
+            ++ ("  graph [" ++ styles.graph ++ "]" ++ "\n")
+            ++ ("  node [" ++ styles.node ++ "]" ++ "\n")
+            ++ ("  edge [" ++ styles.edge ++ "]" ++ "\n\n")
+            ++ (edgesString ++ "\n\n")
+            ++ (nodesString ++ "\n}")
+
+
+{-| Same as `outputWithStyles`, but allows each node and edge to include its own attrs. Note that you must supply a `Graph { a | text : String, attrs : String } { a | attrs : String }`, where the "text" field of the node is the text to be printed in that node, and the "attrs" fields must be a valid attrs string.
+-}
+outputWithStylesWithOverrides : Styles -> Graph { a | text : String, attrs : String } { a | attrs : String } -> String
+outputWithStylesWithOverrides styles graph =
+    let
+        getText id =
+            get id graph
+                |> Maybe.map (.node >> .label >> .text)
+                |> Maybe.withDefault ("*Node id " ++ toString id ++ " not found*")
+
+        edges =
+            let
+                sortEdges a b =
+                    case compare a.from b.from of
+                        LT ->
+                            LT
+
+                        GT ->
+                            GT
+
+                        EQ ->
+                            compare a.to b.to
+            in
+                Graph.edges graph
+                    |> List.sortWith sortEdges
+
+        nodes =
+            Graph.nodes graph
+
+        edgesString =
+            List.map edge edges
+                |> String.join "\n"
+
+        edge ({ from, to, label } as edge) =
+            "  "
+                ++ Basics.toString (getText from)
+                ++ " -> "
+                ++ Basics.toString (getText to)
+                ++ if not <| String.isEmpty label.attrs then
+                    " [" ++ label.attrs ++ "]"
+                   else
+                    ""
+
+        nodesString =
+            List.map node nodes
+                |> String.join "\n"
+
+        node node =
+            "  "
+                ++ Basics.toString (getText node.id)
+                ++ if not <| String.isEmpty node.label.attrs then
+                    " [" ++ node.label.attrs ++ "]"
+                   else
+                    ""
     in
         "digraph G {\n"
             ++ ("  rankdir=" ++ toString styles.rankdir ++ "\n")
