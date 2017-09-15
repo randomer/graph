@@ -1,21 +1,20 @@
 module Graph
     exposing
-    -- Data
-        ( Adjacency
+        ( AcyclicGraph
+        , Adjacency
         , BfsNodeVisitor
         , DfsNodeVisitor
         , Edge
         , Graph
-          -- Building
         , NeighborSelector
         , Node
         , NodeContext
         , NodeId
         , SimpleNodeVisitor
-          -- DFS
         , alongIncomingEdges
         , alongOutgoingEdges
         , bfs
+        , checkAcyclic
         , dfs
         , dfsForest
         , dfsTree
@@ -23,17 +22,13 @@ module Graph
         , empty
         , fold
         , fromNodeLabelsAndEdgePairs
-          -- Transforms
         , fromNodesAndEdges
         , get
         , guidedBfs
-          -- Topological sort
         , guidedDfs
-          -- BFS
         , heightLevels
         , ignorePath
         , inducedSubgraph
-          -- Query
         , insert
         , isEmpty
         , mapContexts
@@ -41,22 +36,17 @@ module Graph
         , mapNodes
         , member
         , nodeIdRange
-          -- List representations
         , nodeIds
         , nodes
         , onDiscovery
         , onFinish
         , remove
         , reverseEdges
-          -- Characterization
-          -- Traversals
         , size
         , stronglyConnectedComponents
-          -- String representation
         , symmetricClosure
         , toString
         , topologicalSort
-          -- Strongly connected components
         , update
         )
 
@@ -95,6 +85,8 @@ representation.
 
 
 # Characterization
+
+@docs AcyclicGraph, checkAcyclic
 
 
 # Traversals
@@ -725,6 +717,81 @@ mapEdges f =
 
 
 {- CHARACTERIZATION -}
+
+
+{-| `AcyclicGraph` wraps a `Graph` and witnesses the fact that
+it is acyclic.
+
+This can be passed on to functions that only work on acyclic graphs,
+like `topologicalSort` and `heightLevels`.
+
+-}
+type AcyclicGraph n e
+    = AcyclicGraph (Graph n e) (List NodeId)
+
+
+unsafeGet : String -> NodeId -> Graph n e -> NodeContext n e
+unsafeGet msg id graph =
+    case get id graph of
+        Nothing ->
+            Debug.crash msg
+
+        Just ctx ->
+            ctx
+
+
+checkForBackEdges : List NodeId -> Graph n e -> Result (Edge e) (AcyclicGraph n e)
+checkForBackEdges ordering graph =
+    let
+        check id ( backSet, _ ) =
+            let
+                backSetWithId =
+                    IntDict.insert id () backSet
+
+                error =
+                    "Graph.checkForBackEdges: `ordering` didn't contain `id`"
+
+                ctx =
+                    unsafeGet error id graph
+
+                backEdges =
+                    IntDict.intersect ctx.outgoing backSetWithId
+            in
+            case IntDict.findMin backEdges of
+                Nothing ->
+                    Ok ( backSetWithId, () )
+
+                Just ( to, label ) ->
+                    Err (Edge id to label)
+
+        success _ =
+            AcyclicGraph graph ordering
+    in
+    ordering
+        |> List.foldl
+            (\id res -> res |> Result.andThen (check id))
+            (Ok ( IntDict.empty, () ))
+        |> Result.map success
+
+
+{-| `checkAcyclic graph` checks `graph` for cycles.
+
+If there are any cycles, this will return `Err edge`,
+where `edge` is an `Edge` that is part of a cycle.
+If there aren't any cycles, this will return `Ok acyclic`, where
+`acyclic` is an `AcyclicGraph` that witnesses this fact.
+
+-}
+checkAcyclic : Graph n e -> Result (Edge e) (AcyclicGraph n e)
+checkAcyclic graph =
+    let
+        reversePostOrder =
+            dfs (onFinish (.node >> .id >> (::))) [] graph
+    in
+    checkForBackEdges reversePostOrder graph
+
+
+
 {- GRAPH OPS -}
 
 
@@ -855,9 +922,9 @@ type alias DfsNodeVisitor n e acc =
 will be called upon node discovery. This eases providing `DfsNodeVisitor`s in
 the default case:
 
-    dfsPostOrder : Graph n e -> List (NodeContext n e)
-    dfsPostOrder graph =
-        dfs (onDiscovery (::)) [] graph
+    dfsPreOrder : Graph n e -> List (NodeContext n e)
+    dfsPreOrder graph =
+        List.reverse (dfs (onDiscovery (::)) [] graph)
 
 -}
 onDiscovery : SimpleNodeVisitor n e acc -> DfsNodeVisitor n e acc
@@ -869,9 +936,9 @@ onDiscovery visitor ctx acc =
 will be called upon node finish. This eases providing `DfsNodeVisitor`s in
 the default case:
 
-    dfsPreOrder : Graph n e -> List (NodeContext n e)
-    dfsPreOrder graph =
-        dfs (onFinish (::)) [] graph
+    dfsPostOrder : Graph n e -> List (NodeContext n e)
+    dfsPostOrder graph =
+        List.reverse (dfs (onFinish (::)) [] graph)
 
 -}
 onFinish : SimpleNodeVisitor n e acc -> DfsNodeVisitor n e acc
@@ -1101,7 +1168,7 @@ bfs visitNode acc graph =
             bfs visitNode finalAcc restgraph1
 
 
-{-| Computes the height function of a given graph. This is a more general
+{-| Computes the height function of a given `AcyclicGraph`. This is a more general
 [topological sort](https://en.wikipedia.org/wiki/Topological_sorting),
 where independent nodes are in the same height level (e.g. the same list
 index). A valid topological sort is trivially obtained by flattening the
@@ -1114,13 +1181,16 @@ There is the excellent reference
 [Algorithmic Graph Theory and Perfect Graphs](http://dl.acm.org/citation.cfm?id=984029).
 
 -}
-heightLevels : Graph n e -> List (List (NodeContext n e))
-heightLevels graph =
+heightLevels : AcyclicGraph n e -> List (List (NodeContext n e))
+heightLevels (AcyclicGraph graph _) =
     let
+        isSource ctx =
+            IntDict.isEmpty ctx.incoming
+
         sources =
             fold
                 (\ctx acc ->
-                    if IntDict.isEmpty ctx.incoming then
+                    if isSource ctx then
                         ctx :: acc
                     else
                         acc
@@ -1183,40 +1253,31 @@ heightLevels graph =
     go sources [] (countIndegrees graph) graph
 
 
-{-| Checks if the given graph is acyclic. If so, it computes a
-[topological ordering](https://en.wikipedia.org/wiki/Topological_sorting) of the
-graph (the `Ok` case), otherwise it will return the result of
-`stronglyConnectedComponents` (`Err` case).
+{-| Computes a
+[topological ordering](https://en.wikipedia.org/wiki/Topological_sorting)
+of the given `AcyclicGraph`.
 -}
-topologicalSort : Graph n e -> Result (List (Graph n e)) (List (NodeContext n e))
-topologicalSort graph =
+topologicalSort : AcyclicGraph n e -> List (NodeContext n e)
+topologicalSort (AcyclicGraph graph ordering) =
     let
-        scc =
-            stronglyConnectedComponents graph
-
-        unwrapSingleNodeGraph g =
-            case nodeIdRange g of
-                Nothing ->
-                    Debug.crash "Invariant hurt in Graph.topologicalSort: No strongly connected component should be empty"
-
-                Just ( nodeId, _ ) ->
-                    case get nodeId g of
-                        Nothing ->
-                            Debug.crash "Invariant hurt in Graph.topologicalSort: nodeId in nodeIdRange of the strongly connected component should be present in the original graph"
-
-                        Just ctx ->
-                            ctx
+        error =
+            "Graph.topologicalSort: Invalid `AcyclicGraph`, where the ordering contained nodes not present in the graph"
     in
-    if List.length scc == size graph then
-        Result.Ok (List.map unwrapSingleNodeGraph scc)
-    else
-        Result.Err scc
+    List.map (\id -> unsafeGet error id graph) ordering
 
 
-{-| Decomposes a graph into its strongly connected components. The resulting
-list is a topological ordering of the component graph.
+{-| Decomposes a graph into its strongly connected components.
+
+`Ok acyclic` means that the graph was acyclic (so every node in the
+graph forms a single connected component).
+
+`Err components` means there were cycles in the graph and as such there is
+at least one non-`singleton` connected component in `components`. The resulting
+list of `components` is a topological ordering of the _condendation_ (e.g. the
+acyclic component graph) of the input graph.
+
 -}
-stronglyConnectedComponents : Graph n e -> List (Graph n e)
+stronglyConnectedComponents : Graph n e -> Result (List (Graph n e)) (AcyclicGraph n e)
 stronglyConnectedComponents graph =
     -- Based on Cormen, using 2 DFS
     let
@@ -1225,12 +1286,11 @@ stronglyConnectedComponents graph =
 
         forest =
             dfsForest timestamps (reverseEdges graph)
-
-        -- We could optimize out reverseEdges
-        components =
-            List.map (Tree.preOrderList >> List.foldr insert empty >> reverseEdges) forest
     in
-    components
+    if List.length forest == size graph then
+        Ok (AcyclicGraph graph timestamps)
+    else
+        Err (List.map (Tree.preOrderList >> List.foldr insert empty >> reverseEdges) forest)
 
 
 

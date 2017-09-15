@@ -16,14 +16,19 @@ isJust m =
             False
 
 
-isErr : Result m n -> Bool
-isErr result =
+isOk : Result m n -> Bool
+isOk result =
     case result of
         Err _ ->
-            True
+            False
 
         Ok _ ->
-            False
+            True
+
+
+isErr : Result m n -> Bool
+isErr result =
+    not (isOk result)
 
 
 expectEqualComparing : (a -> b) -> a -> a -> Expect.Expectation
@@ -62,6 +67,7 @@ dressUp =
             , e 2 6 -- pants before belt
             , e 5 6 -- shirt before belt
             , e 5 7 -- shirt before tie
+            , e 4 8 -- watch before jacket
             , e 6 8 -- belt before jacket
             , e 7 8 -- tie before jacket
             ]
@@ -118,6 +124,39 @@ connectedComponents =
 noNeighbors : Node String -> NodeContext String ()
 noNeighbors node =
     NodeContext node IntDict.empty IntDict.empty
+
+
+isValidTopologicalOrderingOf : Graph n e -> List (NodeContext n e) -> Bool
+isValidTopologicalOrderingOf graph ordering =
+    ordering
+        |> List.foldl
+            (\ctx maybeIds ->
+                maybeIds
+                    |> Maybe.andThen
+                        (\ids ->
+                            if List.all (flip IntDict.member ids) (IntDict.keys ctx.incoming) then
+                                ids |> IntDict.insert ctx.node.id () |> Just
+                            else
+                                Nothing
+                        )
+            )
+            (Just IntDict.empty)
+        |> isJust
+        |> (&&) (List.length ordering == Graph.size graph)
+
+
+expectTopologicalOrderingOf : Graph n e -> List (NodeContext n e) -> Expect.Expectation
+expectTopologicalOrderingOf graph ordering =
+    let
+        message =
+            String.join "\n"
+                [ "Expected a valid topological ordering of "
+                , "    " ++ Graph.toString graph
+                , "but got"
+                , "    " ++ toString ordering
+                ]
+    in
+    Expect.true message (isValidTopologicalOrderingOf graph ordering)
 
 
 all : Test
@@ -179,7 +218,7 @@ all =
                 , test "edges" <|
                     \() ->
                         Expect.equal
-                            [ ( 0, 3 ), ( 1, 2 ), ( 1, 3 ), ( 2, 3 ), ( 2, 6 ), ( 5, 6 ), ( 5, 7 ), ( 6, 8 ), ( 7, 8 ) ]
+                            [ ( 0, 3 ), ( 1, 2 ), ( 1, 3 ), ( 2, 3 ), ( 2, 6 ), ( 4, 8 ), ( 5, 6 ), ( 5, 7 ), ( 6, 8 ), ( 7, 8 ) ]
                             (dressUp
                                 |> Graph.edges
                                 |> List.map (\e -> ( e.from, e.to ))
@@ -351,50 +390,50 @@ all =
                             )
                 ]
 
-        isValidTopologicalOrderingOf graph ordering =
-            ordering
-                |> List.foldl
-                    (\ctx maybeIds ->
-                        maybeIds
-                            |> Maybe.andThen
-                                (\ids ->
-                                    if List.all (flip IntDict.member ids) (IntDict.keys ctx.incoming) then
-                                        ids |> IntDict.insert ctx.node.id () |> Just
-                                    else
-                                        Nothing
-                                )
-                    )
-                    (Just IntDict.empty)
-                |> isJust
-                |> (&&) (List.length ordering == Graph.size graph)
+        checkAcyclicTests =
+            describe "checkAcyclicTests" <|
+                [ test "Ok for graph with no cycles" <|
+                    \() ->
+                        Expect.true
+                            "Should return Ok"
+                            (isOk (Graph.checkAcyclic dressUp))
+                , test "Err for cyclic graph" <|
+                    \() ->
+                        Expect.true
+                            "Should return Err"
+                            (isErr (Graph.checkAcyclic dressUpWithCycle))
+                , test "Err for connectedComponents" <|
+                    \() ->
+                        Expect.true
+                            "Should return Err"
+                            (isErr (Graph.checkAcyclic connectedComponents))
+                ]
 
         topologicalSortTests =
             describe "topologicalSort"
-                [ test "ok for graph with no cycles" <|
+                [ test "valid topological ordering" <|
                     \() ->
-                        Expect.true
-                            "expected a valid topological ordering"
-                            (case Graph.topologicalSort dressUp of
-                                Ok ordering ->
-                                    isValidTopologicalOrderingOf dressUp ordering
+                        case Graph.checkAcyclic dressUp of
+                            Err e ->
+                                Expect.fail
+                                    ("dressUp should be acylic, but returned edge " ++ toString e)
 
-                                Err err ->
-                                    False
-                            )
-                , test "error for graph with cycles" <|
-                    \() ->
-                        Expect.true
-                            "expected Result.Err"
-                            (isErr (Graph.topologicalSort dressUpWithCycle))
+                            Ok acyclic ->
+                                acyclic
+                                    |> Graph.topologicalSort
+                                    |> expectTopologicalOrderingOf dressUp
                 , test "heightLevels" <|
                     \() ->
-                        Expect.true
-                            "expected a valid topological ordering"
-                            (dressUp
-                                |> Graph.heightLevels
-                                |> List.concat
-                                |> isValidTopologicalOrderingOf dressUp
-                            )
+                        case Graph.checkAcyclic dressUp of
+                            Err e ->
+                                Expect.fail
+                                    ("dressUp should be acylic, but returned edge " ++ toString e)
+
+                            Ok acyclic ->
+                                acyclic
+                                    |> Graph.heightLevels
+                                    |> List.concat
+                                    |> expectTopologicalOrderingOf dressUp
                 ]
 
         bfsTests =
@@ -412,7 +451,7 @@ all =
 
         sccTests =
             let
-                components =
+                result =
                     Graph.stronglyConnectedComponents connectedComponents
 
                 sg nodeIds =
@@ -421,7 +460,12 @@ all =
                         |> Graph.toString
             in
             describe "Strongly connected components"
-                [ test "The expected SCCs in order" <|
+                [ test "The input graph was acyclic" <|
+                    \() ->
+                        Expect.true
+                            "Result should be Err"
+                            (isErr result)
+                , test "The expected SCCs in order" <|
                     \() ->
                         Expect.equal
                             [ sg [ 0, 1, 4 ] -- "abe"
@@ -429,7 +473,19 @@ all =
                             , sg [ 5, 6 ] -- "ef"
                             , sg [ 7 ] -- "h"
                             ]
-                            (List.map Graph.toString components)
+                            (case result of
+                                Err components ->
+                                    List.map Graph.toString components
+
+                                Ok _ ->
+                                    []
+                             -- should never happen oO
+                            )
+                , test "dressUp was acyclic" <|
+                    \() ->
+                        Expect.true
+                            "Should be Ok"
+                            (isOk (Graph.stronglyConnectedComponents dressUp))
                 ]
 
         unitTests =
@@ -447,6 +503,7 @@ all =
                 , foldTests
                 , mapTests
                 , graphOpsTests
+                , checkAcyclicTests
                 , topologicalSortTests
                 , bfsTests
                 , sccTests
