@@ -1271,9 +1271,8 @@ topologicalSort (AcyclicGraph graph ordering) =
 `Ok acyclic` means that the graph was acyclic (so every node in the
 graph forms a single connected component).
 
-`Err components` means there were cycles in the graph and as such there is
-at least one non-`singleton` connected component in `components`. The resulting
-list of `components` is a topological ordering of the _condendation_ (e.g. the
+`Err components` means there were cycles in the graph. The resulting
+list of `components` is a topological ordering of the _condensation_ (e.g. the
 acyclic component graph) of the input graph.
 
 -}
