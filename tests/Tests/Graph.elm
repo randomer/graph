@@ -449,6 +449,9 @@ all =
                             )
                 ]
 
+        graphWithLoop =
+            Graph.fromNodeLabelsAndEdgePairs [0] [(0,0)]
+
         sccTests =
             let
                 result =
@@ -481,11 +484,16 @@ all =
                                     []
                              -- should never happen oO
                             )
-                , test "dressUp was acyclic" <|
+                , test "dressUp is acyclic" <|
                     \() ->
                         Expect.true
                             "Should be Ok"
                             (isOk (Graph.stronglyConnectedComponents dressUp))
+                , test "The input graph has loops" <|
+                    \() ->
+                        Expect.true
+                            "Should be Err"
+                            (isErr (Graph.stronglyConnectedComponents graphWithLoop))
                 ]
 
         unitTests =

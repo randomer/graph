@@ -1281,16 +1281,18 @@ stronglyConnectedComponents : Graph n e -> Result (List (Graph n e)) (AcyclicGra
 stronglyConnectedComponents graph =
     -- Based on Cormen, using 2 DFS
     let
-        timestamps =
+        reversePostOrder =
             dfs (onFinish (.node >> .id >> (::))) [] graph
-
-        forest =
-            dfsForest timestamps (reverseEdges graph)
     in
-    if List.length forest == size graph then
-        Ok (AcyclicGraph graph timestamps)
-    else
-        Err (List.map (Tree.preOrderList >> List.foldr insert empty >> reverseEdges) forest)
+    checkForBackEdges reversePostOrder graph
+        |> Result.mapError
+            (\_ ->
+                let
+                    forest =
+                        dfsForest reversePostOrder (reverseEdges graph)
+                in
+                List.map (Tree.preOrderList >> List.foldr insert empty >> reverseEdges) forest
+            )
 
 
 
