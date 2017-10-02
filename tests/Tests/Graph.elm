@@ -450,7 +450,7 @@ all =
                 ]
 
         graphWithLoop =
-            Graph.fromNodeLabelsAndEdgePairs [0] [(0,0)]
+            Graph.fromNodeLabelsAndEdgePairs [ 0 ] [ ( 0, 0 ) ]
 
         sccTests =
             let
