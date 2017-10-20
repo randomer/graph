@@ -103,7 +103,7 @@ the root of the tree. Empty subtrees are filtered out. An example:
     tree1 == tree2
 
 -}
-inner : label -> List (Tree label) -> Tree label
+inner : label -> Forest label -> Tree label
 inner label children =
     let
         nonEmptyChildren =
